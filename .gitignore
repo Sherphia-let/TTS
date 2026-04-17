@@ -1,0 +1,72 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.tmp
+
+# =========================
+# Virtual Environments
+# =========================
+venv/
+omni_env/
+demucs_env/
+venv_gemma/
+.env
+
+# =========================
+# Large Data Folders (IMPORTANT)
+# =========================
+data/raw/
+data/clean_clips/
+data/clean_v3/
+data/denoised_clips/
+data/final_clips/
+data/no_songs/
+data/normed_clips/
+data/rejected_clips/
+data/segments/
+data/separated/
+
+# =========================
+# Transcriptions (can be large)
+# =========================
+transcripted_datas/
+
+# =========================
+# Model / Audio Outputs
+# =========================
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+
+# =========================
+# HuggingFace / Cache
+# =========================
+.cache/
+huggingface/
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# =========================
+# Logs / Temp
+# =========================
+logs/
+*.out
+*.err
+
+# =========================
+# Test outputs
+# =========================
+test_outputs/

@@ -39,6 +39,12 @@ Loudness Normalization
    ↓
 Quality Filtering
    ↓
+Transcription (ASR)
+   ↓
+Transcript Quality Assurance (Gemma 4B)
+   ↓
+Text Normalization (Rules + LLM)
+   ↓
 Final Clean Dataset ✅
 ```
 
@@ -56,7 +62,7 @@ Final Clean Dataset ✅
 │   ├── final_clips/
 │   ├── denoised_clips/
 │   ├── normed_clips/
-│   ├── clean_clips/
+│   ├── clean_v3/
 │   └── rejected_clips/
 ├── .env
 └── README.md

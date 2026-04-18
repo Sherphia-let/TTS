@@ -268,7 +268,31 @@ Separates clips into:
 * ❌ Rejected clips (with logs)
 
 ---
+## 🧪 Environment Architecture
 
+This project uses 3 isolated environments:
+
+### 1️⃣ ASR Environment (Omnilingual / Whisper)
+- Speech → text conversion
+- File: `requirements_omni_asr.txt`
+
+### 2️⃣ Demucs Environment
+- Audio cleaning, separation, diarization
+- File: `requirements_demucs.txt`
+
+### 3️⃣ Gemma Environment (vLLM)
+- Transcript QA + text normalization
+- File: `requirements_gemma.txt`
+
+---
+## ⚠️ Important Notes
+
+- vLLM requires CUDA 12.9 nightly build
+- DeepGEMM is disabled:
+  export VLLM_USE_DEEP_GEMM=0
+- Each stage runs in a separate virtual environment to avoid dependency conflicts
+
+---
 ## 📊 Final Output
 
 ```

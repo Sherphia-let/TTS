@@ -11,8 +11,8 @@ from faster_whisper import WhisperModel
 MODEL_NAME = "omniASR_LLM_3B_v2"
 # MODEL_NAME = "omniASR_LLM_Unlimited_3B_v2"  # use this if audio > 40 sec
 
-INPUT_DIR = "/data/TTS/sherphia/data_one/raw/Tamil/spring_inx_r2"
-OUTPUT_DIR = "/data/TTS/sherphia/transcripted_datas/transcripts_omnilingual_spring_inx_r2"
+INPUT_DIR = "/data/TTS/sherphia/data/raw/Tamil/spring_inx_r2"
+OUTPUT_DIR = "/data/TTS/sherphia/test/transcripts_omnilingual_spring_inx_r2"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 

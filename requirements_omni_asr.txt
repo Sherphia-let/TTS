@@ -1,0 +1,14 @@
+faster-whisper==1.0.3
+ctranslate2==4.4.0
+indic-whisper   # via HF model (not pip)
+
+soundfile==0.13.1
+librosa
+
+numpy==1.26.4
+tqdm==4.67.3
+
+torch==2.8.0+cu128
+torchaudio==2.8.0+cu128
+
+huggingface_hub==0.36.2

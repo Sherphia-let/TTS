@@ -1,0 +1,40 @@
+# ============================================================
+# requirements_llm.txt
+# Steps: 7 (Gemma QA) + 8 (Text Normalization)
+# Python: 3.11
+# CUDA: 12.8 / 12.9 (H100)
+# ============================================================
+
+# ── Core LLM inference ───────────────────────────────────────
+vllm==0.19.1rc1.dev389+gb0755523d
+
+transformers>=5.5.4
+accelerate==1.13.0
+huggingface_hub>=1.11.0
+
+# ── Audio I/O (for multimodal input handling) ───────────────
+soundfile==0.13.1
+
+# ── Numerical / utilities ────────────────────────────────────
+numpy>=1.26.0
+tqdm>=4.66.0
+regex
+
+# ============================================================
+# ⚠️ IMPORTANT INSTALL NOTES
+# ============================================================
+
+# 1. DO NOT install vLLM via plain pip
+#    Use nightly build instead:
+#
+# uv pip install -U vllm --pre \
+#   --extra-index-url https://wheels.vllm.ai/nightly/cu129 \
+#   --extra-index-url https://download.pytorch.org/whl/cu129 \
+#   --index-strategy unsafe-best-match
+
+# 2. REQUIRED ENV VARIABLE (fixes DeepGEMM crash)
+#    export VLLM_USE_DEEP_GEMM=0
+
+# 3. RECOMMENDED:
+#    Keep Step 7/8 in a separate virtual environment
+#    (vllm_env) due to CUDA + dependency coupling

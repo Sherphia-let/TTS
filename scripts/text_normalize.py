@@ -3,39 +3,45 @@ import json
 from glob import glob
 from tqdm import tqdm
 import soundfile as sf
-import torch
-from transformers import AutoProcessor, AutoModelForCausalLM
+
+from transformers import AutoProcessor
+from vllm import LLM, SamplingParams
 
 # =========================
 # CONFIG
 # =========================
+os.environ["VLLM_USE_DEEP_GEMM"] = "0"
+
 MODEL_ID = "google/gemma-4-E4B-it"
 
-INPUT_DIR  = "/data/TTS/sherphia/transcripted_datas/transcripts_omnilingual_spring_inx_r1"
-AUDIO_DIR  = "/data/TTS/sherphia/data/raw/Tamil/spring_inx_r1"
+INPUT_DIR   = "/data/TTS/sherphia/transcripted_datas/transcripts_omnilingual_spring_inx_r1"
+AUDIO_DIR   = "/data/TTS/sherphia/data/raw/Tamil/spring_inx_r1"
 WHISPER_DIR = "/data/TTS/sherphia/transcripted_datas/transcripts_omnilingual_spring_inx_r1"
-OUTPUT_DIR = "/data/TTS/sherphia/data/clean_v3/tamil/transcripts_normalized_spring_inx_r1"
+OUTPUT_DIR  = "/data/TTS/sherphia/data/clean_v3/tamil/transcripts_normalized_spring_inx_r1"
 
-MAX_NEW_TOKENS = 256
-TEMPERATURE    = 1.0    # model card recommended
-TOP_P          = 0.95
-TOP_K          = 64
-MAX_AUDIO_SEC  = 30     # Gemma 4 hard limit
+MAX_AUDIO_SEC = 30
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # =========================
-# LOAD MODEL (ONCE)
+# LOAD MODEL (ONCE) — vLLM style
 # =========================
-print("Loading model...")
+print("Loading model with vLLM...")
 
 processor = AutoProcessor.from_pretrained(MODEL_ID)
-model = AutoModelForCausalLM.from_pretrained(
-    MODEL_ID,
-    torch_dtype=torch.bfloat16,
-    device_map="auto"
+
+llm = LLM(
+    model=MODEL_ID,
+    dtype="bfloat16",
+    limit_mm_per_prompt={"audio": 1},
 )
-model.eval()
+
+sampling_params = SamplingParams(
+    temperature=1.0,
+    top_p=0.95,
+    top_k=64,
+    max_tokens=256,
+)
 
 print("Model loaded ✅")
 
@@ -57,7 +63,7 @@ STRICT RULES:
 """
 
 # =========================
-# SINGLE FILE INFERENCE
+# SINGLE FILE INFERENCE — vLLM style
 # =========================
 def normalize_one(text, audio, sr, duration):
     messages = [
@@ -65,7 +71,7 @@ def normalize_one(text, audio, sr, duration):
         {
             "role": "user",
             "content": [
-                {"type": "audio", "audio": audio},   # audio first (model card best practice)
+                {"type": "audio", "audio": audio},
                 {"type": "text", "text": f"""Audio duration: {duration:.2f} seconds
 
 ASR TEXT:
@@ -81,6 +87,7 @@ OUTPUT (corrected sentence only):"""}
         }
     ]
 
+    # Chat template formatting (processor only, no tensors)
     text_input = processor.apply_chat_template(
         messages,
         tokenize=False,
@@ -88,31 +95,16 @@ OUTPUT (corrected sentence only):"""}
         enable_thinking=False
     )
 
-    inputs = processor(
-        text=text_input,
-        audio=audio,
-        sampling_rate=sr,
-        return_tensors="pt"
-    ).to(model.device)
+    # vLLM multimodal input
+    prompt_input = {
+        "prompt": text_input,
+        "multi_modal_data": {
+            "audio": [(audio, sr)]
+        },
+    }
 
-    input_len = inputs["input_ids"].shape[-1]
-
-    with torch.inference_mode():
-        output_ids = model.generate(
-            **inputs,
-            max_new_tokens=MAX_NEW_TOKENS,
-            temperature=TEMPERATURE,
-            top_p=TOP_P,
-            top_k=TOP_K,
-            do_sample=True
-        )
-
-    response = processor.decode(
-        output_ids[0][input_len:],
-        skip_special_tokens=True
-    ).strip()
-
-    return response
+    outputs = llm.generate(prompt_input, sampling_params=sampling_params)
+    return outputs[0].outputs[0].text.strip()
 
 # =========================
 # LOAD WHISPER TRANSCRIPT
@@ -151,22 +143,18 @@ def process_file(input_path, output_path):
             continue
 
         try:
-            # Load & prep audio
             audio, sr = sf.read(audio_path)
             if len(audio.shape) > 1:
                 audio = audio.mean(axis=1)
 
-            # Trim to 30s max
             max_samples = MAX_AUDIO_SEC * sr
             if len(audio) > max_samples:
                 audio = audio[:max_samples]
 
             duration = len(audio) / sr
 
-            # Load raw whisper transcript
             raw_text = load_whisper_transcript(file_name)
 
-            # Normalize
             corrected_input = item.get("corrected", item.get("transcript", "")).strip()
             if not corrected_input:
                 print(f"Empty text for {file_name}, skipping...")

@@ -30,6 +30,7 @@ data/normed_clips/
 data/rejected_clips/
 data/segments/
 data/separated/
+test/
 
 # =========================
 # Transcriptions (can be large)

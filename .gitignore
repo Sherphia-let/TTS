@@ -22,7 +22,6 @@ venv_gemma/
 # =========================
 data/raw/
 data/clean_clips/
-data/clean_v3/
 data/denoised_clips/
 data/final_clips/
 data/no_songs/

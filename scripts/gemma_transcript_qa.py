@@ -15,9 +15,9 @@ from vllm import LLM, SamplingParams
 os.environ["VLLM_USE_DEEP_GEMM"] = "0"
 MODEL_ID = "google/gemma-4-E4B-it"
 
-AUDIO_DIR = "/data/TTS/sherphia/data/raw/Tamil/spring_inx_r2"
-TRANSCRIPT_DIR = "/data/TTS/sherphia/transcripted_datas/transcripts_omnilingual_spring_inx_r2"
-OUTPUT_DIR = "/data/TTS/sherphia/test/transcripts"
+AUDIO_DIR = "/data/TTS/sherphia/data/final_clips"
+TRANSCRIPT_DIR = "/data/TTS/sherphia/transcripted_datas/transcripts_whisper_hindi_clean_v3"
+OUTPUT_DIR = "/data/TTS/sherphia/transcripted_datas/transcripts_corrected_hindi_movies"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -60,7 +60,13 @@ You MUST:
 - Merge or split words wherever required
 - Correct incorrect words using audio context
 - Ensure the output is fully natural and fluent
-- Fix spacing issues completely
+- Fix spacing issues completely and there should not be any grammatical and wrong words in the output.
+- Words should be exactly from the audio
+- Preserve original script of each word
+- If a word is in Hindi/Tamil (or any non-English script), keep it in that script
+- Do NOT convert Hindi/Tamil words into Latin (romanized) form
+- Only keep English words in English (Latin script)
+- Do NOT transliterate between scripts under any circumstance
 
 LEXICAL VALIDATION (VERY IMPORTANT):
 - You MUST check whether each word is a real, valid word in the language
@@ -120,7 +126,14 @@ def safe_json_parse(text):
 # =========================
 # GET FILE LIST
 # =========================
-audio_files = sorted(glob(os.path.join(AUDIO_DIR, "*.wav")))
+audio_files = []
+
+for root, dirs, files in os.walk(AUDIO_DIR):
+    for file in files:
+        if file.endswith(".wav"):
+            audio_files.append(os.path.join(root, file))
+
+audio_files = sorted(audio_files)
 print(f"Found {len(audio_files)} audio files")
 
 # =========================
@@ -128,13 +141,16 @@ print(f"Found {len(audio_files)} audio files")
 # =========================
 for audio_path in tqdm(audio_files):
 
-    file_id = os.path.basename(audio_path).replace(".wav", "")
+    rel_path = os.path.relpath(audio_path, AUDIO_DIR)
+    file_id = os.path.splitext(rel_path)[0]
+
+    transcript_path = os.path.join(TRANSCRIPT_DIR, f"{file_id}.json")
     output_path = os.path.join(OUTPUT_DIR, f"{file_id}.json")
 
     if os.path.exists(output_path):
         continue
 
-    transcript_path = os.path.join(TRANSCRIPT_DIR, f"{file_id}.json")
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     if not os.path.exists(transcript_path):
         print(f"Missing transcript for {file_id}, skipping...")
         continue

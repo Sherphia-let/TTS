@@ -14,10 +14,10 @@ os.environ["VLLM_USE_DEEP_GEMM"] = "0"
 
 MODEL_ID = "google/gemma-4-E4B-it"
 
-INPUT_DIR   = "/data/TTS/sherphia/transcripted_datas/transcripts_omnilingual_spring_inx_r1"
-AUDIO_DIR   = "/data/TTS/sherphia/data/raw/Tamil/spring_inx_r1"
-WHISPER_DIR = "/data/TTS/sherphia/transcripted_datas/transcripts_omnilingual_spring_inx_r1"
-OUTPUT_DIR  = "/data/TTS/sherphia/data/clean_v3/tamil/transcripts_normalized_spring_inx_r1"
+INPUT_DIR   = "/data/TTS/sherphia/transcripted_datas/transcripts_corrected_hindi_movies"
+AUDIO_DIR   = "/data/TTS/sherphia/data/final_clips"
+WHISPER_DIR = "/data/TTS/sherphia/transcripted_datas/transcripts_whisper_hindi_clean_v3"
+OUTPUT_DIR  = "/data/TTS/sherphia/data/clean_v3/hindi/transcripts_normalized_hindi_movies"
 
 MAX_AUDIO_SEC = 30
 
@@ -48,18 +48,15 @@ print("Model loaded ✅")
 # =========================
 # SYSTEM PROMPT
 # =========================
-SYSTEM_PROMPT = """You are a Tamil text normalization expert.
+SYSTEM_PROMPT = """You are a multilingual text normalization expert.
 
 Your task:
-- Convert ASR transcript into clean, grammatically correct Tamil
+- Convert ASR transcript into clean, grammatically correct language
 - Fix spelling, phonetic errors, spacing, and morphology
 - Use audio to resolve ambiguities
-- Convert numbers into correct spoken Tamil form.
-
-STRICT RULES:
-- Do NOT change meaning
-- Keep wording as close as possible
-- Output ONLY the corrected sentence, nothing else
+- Convert numbers into correct spoken language form.
+- Convert any English-origin words written in non-English scripts into standard English spelling, without changing the rest of the sentence.
+- Strictly dont write any non english script words into english script.
 """
 
 # =========================
@@ -110,7 +107,16 @@ OUTPUT (corrected sentence only):"""}
 # LOAD WHISPER TRANSCRIPT
 # =========================
 def load_whisper_transcript(file_name):
-    whisper_path = os.path.join(WHISPER_DIR, file_name.replace(".wav", ".json"))
+    whisper_path = os.path.join(
+        WHISPER_DIR,
+        os.path.splitext(file_name)[0] + ".json"
+    )
+
+    if not os.path.exists(whisper_path):
+        whisper_path = os.path.join(
+            WHISPER_DIR,
+            os.path.basename(os.path.splitext(file_name)[0]) + ".json"
+        )
     if not os.path.exists(whisper_path):
         return ""
     try:
@@ -138,6 +144,11 @@ def process_file(input_path, output_path):
             continue
 
         audio_path = os.path.join(AUDIO_DIR, file_name)
+
+        if not os.path.exists(audio_path):
+            # fallback → try basename only
+            audio_path = os.path.join(AUDIO_DIR, os.path.basename(file_name))
+
         if not os.path.exists(audio_path):
             print(f"Missing audio: {file_name}, skipping...")
             continue
@@ -188,16 +199,27 @@ def process_file(input_path, output_path):
 # MAIN
 # =========================
 def main():
-    input_files = sorted(glob(os.path.join(INPUT_DIR, "*.json")))
+    input_files = []
+
+    for root, dirs, files in os.walk(INPUT_DIR):
+        for file in files:
+            if file.endswith(".json"):
+                input_files.append(os.path.join(root, file))
+
+    input_files = sorted(input_files)
     print(f"Found {len(input_files)} files")
 
     for input_path in input_files:
+        rel_path = os.path.relpath(input_path, INPUT_DIR)
+        output_path = os.path.join(OUTPUT_DIR, rel_path)
+
         filename = os.path.basename(input_path)
-        output_path = os.path.join(OUTPUT_DIR, filename)
 
         if os.path.exists(output_path):
             print(f"Already done, skipping: {filename}")
             continue
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
         print(f"\nProcessing: {filename}")
         process_file(input_path, output_path)

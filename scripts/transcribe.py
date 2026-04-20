@@ -11,13 +11,13 @@ from faster_whisper import WhisperModel
 MODEL_NAME = "omniASR_LLM_3B_v2"
 # MODEL_NAME = "omniASR_LLM_Unlimited_3B_v2"  # use this if audio > 40 sec
 
-INPUT_DIR = "/data/TTS/sherphia/data/raw/Tamil/spring_inx_r2"
-OUTPUT_DIR = "/data/TTS/sherphia/test/transcripts_omnilingual_spring_inx_r2"
+INPUT_DIR = "/data/TTS/sherphia/data/clean_v3/hindi"
+OUTPUT_DIR = "/data/TTS/sherphia/transcripted_datas/transcripts_whisper_hindi_clean_v3"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-LANG_CODE = "tam_Taml"  # Tamil
-WHISPER_LANG = "ta"
+LANG_CODE = "hin_Deva"   # Hindi (Omnilingual)
+WHISPER_LANG = "hi"      # Whisper Hindi
 
 BATCH_SIZE = 4  # adjust based on GPU memory
 
@@ -36,10 +36,24 @@ whisper_model = WhisperModel("large-v3", device="cuda", compute_type="float16")
 def natural_sort_key(filename):
     return int(os.path.splitext(filename)[0])
 
-audio_files = sorted(
+# Tamil audios
+'''audio_files = sorted(
     [f for f in os.listdir(INPUT_DIR) if f.endswith(".wav")],
     key=natural_sort_key
-)
+)'''
+
+# Hindi audios
+audio_files = []
+
+for root, dirs, files in os.walk(INPUT_DIR):
+    for file in files:
+        if file.endswith(".wav"):
+            full_path = os.path.join(root, file)
+            audio_files.append(full_path)
+
+audio_files = sorted(audio_files)  # simple sort is enough
+
+print(f"Found {len(audio_files)} audio files...\n")
 
 print(f"Found {len(audio_files)} audio files...\n")
 
@@ -48,8 +62,12 @@ print(f"Found {len(audio_files)} audio files...\n")
 # -----------------------
 for i in tqdm(range(0, len(audio_files), BATCH_SIZE)):
     batch_files = audio_files[i:i + BATCH_SIZE]
-
-    audio_paths = [os.path.join(INPUT_DIR, f) for f in batch_files]
+    #tamil audios
+    #audio_paths = [os.path.join(INPUT_DIR, f) for f in batch_files]
+    
+    #hindi audios
+    audio_paths = batch_files
+    
     lang_list = [LANG_CODE] * len(audio_paths)
 
     try:
@@ -95,9 +113,13 @@ for i in tqdm(range(0, len(audio_files), BATCH_SIZE)):
             "words": None,
             "confidence": None
         }
-
-        base_name = os.path.splitext(file_name)[0]
+        # Tamil audios
+        #base_name = os.path.splitext(file_name)[0]
+        # Hindi audios(4 lines)
+        rel_path = os.path.relpath(file_name, INPUT_DIR)
+        base_name = os.path.splitext(rel_path)[0]
         output_path = os.path.join(OUTPUT_DIR, base_name + ".json")
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(output_data, f, ensure_ascii=False, indent=2)
